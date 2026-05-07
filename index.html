@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bir Ayet Bir Hayat - Etik Testi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Roboto:wght@400;500&display=swap');
+        body { font-family: 'Roboto', sans-serif; }
+        .arabic { font-family: 'Amiri', serif; }
+        .question-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .correct { animation: pop 0.5s; }
+        .wrong { animation: shake 0.5s; }
+        @keyframes pop { 0% { transform: scale(0.8); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen">
+    <div class="max-w-3xl mx-auto p-4">
+        <!-- Header -->
+        <div class="text-center py-8">
+            <h1 class="text-4xl font-bold text-emerald-800 mb-2">BİR AYET BİR HAYAT</h1>
+            <p class="text-emerald-700">Kur'an-ı Kerim'den Etik Dersler</p>
+            <div class="w-24 h-1 bg-emerald-600 mx-auto mt-4 rounded"></div>
+        </div>
+
+        <!-- Progress -->
+        <div id="progress" class="mb-8 bg-white rounded-2xl p-4 shadow">
+            <div class="flex justify-between text-sm mb-2">
+                <span id="progress-text" class="font-medium text-emerald-700">Soru <span id="current-q">1</span>/13</span>
+                <span id="score-text" class="font-medium">Doğru: <span id="correct-count">0</span> | Yanlış: <span id="wrong-count">0</span></span>
+            </div>
+            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-emerald-600 w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+
+        <!-- Question Container -->
+        <div id="quiz-container" class="bg-white rounded-3xl shadow-xl p-8 question-card">
+            <!-- JS ile dolduruluyor -->
+        </div>
+
+        <!-- Navigation -->
+        <div id="nav-buttons" class="flex justify-between mt-6 hidden">
+            <button onclick="prevQuestion()" 
+                    class="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl font-medium transition">
+                <i class="fas fa-arrow-left"></i> Önceki
+            </button>
+            <button onclick="nextQuestion()" 
+                    id="next-btn"
+                    class="flex items-center gap-2 px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-medium transition">
+                Sonraki <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="hidden bg-white rounded-3xl shadow-2xl p-10 text-center">
+            <h2 class="text-3xl font-bold text-emerald-800 mb-6">Test Tamamlandı!</h2>
+            <div class="flex justify-center gap-8 mb-8">
+                <div>
+                    <div id="final-correct" class="text-6xl font-bold text-emerald-600">0</div>
+                    <div class="text-sm text-gray-500">DOĞRU</div>
+                </div>
+                <div>
+                    <div id="final-wrong" class="text-6xl font-bold text-red-500">0</div>
+                    <div class="text-sm text-gray-500">YANLIŞ</div>
+                </div>
+            </div>
+            <canvas id="result-chart" width="300" height="200" class="mx-auto"></canvas>
+            <p class="mt-8 text-xl text-emerald-700 font-medium">Testimizi tamamladığınız için teşekkürler!</p>
+            <button onclick="restartQuiz()" 
+                    class="mt-8 px-10 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-semibold text-lg">
+                Tekrar Başla
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            { id:1, section:"Adalet", ayet:"Nisa Suresi, 58. Ayet: 'Allah, size, emanetleri mutlaka ehline vermenizi ve insanlar arasında hükmettiğiniz zaman adaletle hükmetmenizi emrediyor.'", 
+              scenario:"Bir proje grubunda sunum yapılacak. Grup sözcüsü olarak en sevdiğin arkadaşını mı yoksa topluluk önünde en iyi konuşanı mı seçersin?",
+              options:["Arkadaşım üzülmesin diye onu seçerdim.", "Emaneti ehline vermek için en iyi konuşanı seçerdim."], correct:1 },
+
+            { id:2, section:"Adalet", ayet:"Maide Suresi, 8. Ayet: '...Bir topluma olan kininiz, sakın ha sizi adaletsizliğe itmesin. Âdil olun...'", 
+              scenario:"Hiç anlaşamadığın bir öğrencinin işlemediği bir suçtan dolayı ceza alacağını gördün. Hakikati söyler misin?",
+              options:["'Ona müstahaktır' deyip sessiz kalırdım.", "Kişisel duygularımı bir kenara bırakıp adaleti sağlardım."], correct:1 },
+
+            { id:3, section:"Adalet", ayet:"Bakara Suresi, 179. Ayet: 'Ey akıl sahipleri! Sizin için kısasta hayat vardır...'", 
+              scenario:"Okul kurallarını çiğneyen çok popüler bir arkadaşın var. Ceza alması gerektiğini biliyorsun.",
+              options:["Tepki çekmemek için görmezden gelirdim.", "Kuralların ve adaletin herkesin hayatını koruduğunu savunurdum."], correct:1 },
+
+            { id:4, section:"Merhamet", ayet:"İsra Suresi, 24. Ayet: 'Onlara merhamet ederek tevazu kanadını indir...'", 
+              scenario:"Yaşlı deden yemeğini yerken döküyor ve sen o sırada en sevdiğin filmi izliyorsun.",
+              options:["Sinirlenip odama giderdim.", "Çocukken bana gösterdikleri sabrı hatırlar, şefkatle yardım ederdim."], correct:1 },
+
+            { id:5, section:"Merhamet", ayet:"Nahl Suresi, 97. Ayet: 'Erkek olsun kadın olsun mü'min olarak kim sâlih amel işlerse...'", 
+              scenario:"Harçlığının bir kısmıyla kış günü üşüyen sokak hayvanları için mama mı alırsın?",
+              options:["Sadece kendi ihtiyaçlarımı düşünürdüm.", "Güzel ve bereketli bir hayat için paylaşmayı tercih ederdim."], correct:1 },
+
+            // Aşağıdakilerde şık sırası değiştirildi (doğru cevap A oluyor)
+            { id:6, section:"Dürüstlük", ayet:"Mâide Suresi, 119. Ayet: 'Allah, şöyle diyecek: Bugün, doğrulara, doğruluklarının yarar sağlayacağı gündür.'", 
+              scenario:"Yerde para dolu bir cüzdan buldun ve etrafta kimse yok.",
+              options:["Doğruluğun asıl kazanç olduğunu bilerek cüzdanı sahibine ulaştırırdım.", "İhtiyacım var diyerek parayı alırdım."], correct:0 },
+
+            { id:7, section:"Dürüstlük", ayet:"Bakara Suresi, 204. Ayet: 'Bazı kimseler var ki, dünya hayatına dair sözleri senin hoşuna gider...'", 
+              scenario:"Bir arkadaşın yüzüne çok iyi davranıp arkandan sırlarını anlatıyor.",
+              options:["İkiyüzlülüğün dürüstlüğe sığmadığını bilir, mesafemi korurdum.", "Ben de ona aynı ikiyüzlülükle karşılık verirdim."], correct:0 },
+
+            { id:8, section:"Sorumluluk", ayet:"Necm Suresi, 39. Ayet: '...İnsan için ancak çalıştığı vardır.'", 
+              scenario:"Bir sınavdan yüksek not almak için kopya mı çekersin?",
+              options:["Sadece kendi çalışmamın ve emeğimin bana ait olduğunu bilir, dürüstçe çalışırdım.", "Kolay yoldan kopya ile başarılı olmaya çalışırdım."], correct:0 },
+
+            { id:9, section:"Sorumluluk", ayet:"En'am Suresi, 164. Ayet: 'Herkes günahı yalnız kendi aleyhine kazanır...'", 
+              scenario:"Bir hata yaptınız ve suçu başkasının üzerine atmak çok kolay.",
+              options:["Herkesin kendi sorumluluğunu taşıması gerektiğini hatırlar, hatamı kabul ederdim.", "Suçu arkadaşıma atıp kendimi kurtarırdım."], correct:0 },
+
+            { id:10, section:"Hayatın Mahiyeti", ayet:"Bakara Suresi, 86. Ayet: 'İşte onlar, âhireti verip dünya hayatını satın alan kimselerdir...'", 
+              scenario:"Kısa süreli bir çıkar için yalan söyleyip uzun vadedeki güvenilirliğini sarsar mısın?",
+              options:["Geçici dünya menfaati için kalıcı değerlerimi feda etmezdim.", "Anlık kazancım için yalan söylerdim."], correct:0 },
+
+            { id:11, section:"Hayatın Mahiyeti", ayet:"En'âm Suresi, 32. Ayet: 'Dünya hayatı ancak bir oyun ve bir eğlencedir...'", 
+              scenario:"Arkadaşların bütün gününü oyunla geçirmeni istiyor ama ödevlerin var.",
+              options:["Hayatın bir denge ve imtihan olduğunu hatırlar, sorumluluklarımı yerine getirirdim.", "Hayat sadece eğlence diyerek ödevleri bırakırdım."], correct:0 },
+
+            { id:12, section:"Hayatın Mahiyeti", ayet:"Kehf Suresi: 'Mal ve oğullar dünya hayatının zînetidir. Asıl kalıcı olan sâlih ameller...'", 
+              scenario:"Sosyal medyada sadece pahalı eşyalarınla övünmek mi istersin?",
+              options:["Malın geçici olduğunu bilir, kalıcı iyiliklere odaklanırdım.", "Gösteriş için malımla övünürdüm."], correct:0 },
+
+            { id:13, section:"Hayatın Mahiyeti", ayet:"Hadid Suresi, 20. Ayet: 'Dünya hayatı ancak bir oyundan, bir eğlenceden, bir süs... ibarettir.'", 
+              scenario:"Marka takıntısı olan arkadaşların eski telefonunla alay ediyor.",
+              options:["Bunların geçici birer 'öğünme' yarışı olduğunu hatırlar, halime şükrederdim.", "Üzülür ve yeni telefon için ailemi borca sokardım."], correct:0 }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = { correct: 0, wrong: 0 };
+
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            const container = document.getElementById('quiz-container');
+            
+            container.innerHTML = `
+                <div class="mb-4">
+                    <span class="inline-block bg-emerald-100 text-emerald-700 px-4 py-1 rounded-full text-sm font-medium">${q.section}</span>
+                </div>
+                
+                <div class="mb-8">
+                    <p class="text-lg leading-relaxed text-gray-700">${q.scenario}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-4 mb-8">
+                    <button onclick="answerQuestion(0)" 
+                            class="option-btn text-left p-6 border-2 border-gray-200 hover:border-emerald-300 rounded-2xl transition-all hover:shadow">
+                        <span class="font-semibold text-emerald-700">A) </span>${q.options[0]}
+                    </button>
+                    <button onclick="answerQuestion(1)" 
+                            class="option-btn text-left p-6 border-2 border-gray-200 hover:border-emerald-300 rounded-2xl transition-all hover:shadow">
+                        <span class="font-semibold text-emerald-700">B) </span>${q.options[1]}
+                    </button>
+                </div>
+                
+                <div id="feedback" class="hidden mt-6 p-6 rounded-2xl"></div>
+            `;
+            updateProgress();
+        }
+
+        function answerQuestion(selected) {
+            const q = questions[currentQuestionIndex];
+            const isCorrect = selected === q.correct;
+            
+            if (isCorrect) score.correct++;
+            else score.wrong++;
+
+            document.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
+            
+            const feedback = document.getElementById('feedback');
+            feedback.classList.remove('hidden');
+
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="flex items-center gap-4 text-emerald-600">
+                        <i class="fas fa-check-circle text-4xl"></i>
+                        <div><h3 class="text-2xl font-bold">Aferin! 🎉</h3></div>
+                    </div>
+                    <div class="mt-6 p-5 bg-emerald-50 rounded-2xl">
+                        <p class="arabic text-xl text-emerald-800 mb-3">${q.ayet}</p>
+                    </div>`;
+                confettiExplosion();
+            } else {
+                feedback.innerHTML = `
+                    <div class="flex items-center gap-4 text-red-600">
+                        <i class="fas fa-times-circle text-4xl"></i>
+                        <div><h3 class="text-2xl font-bold">Yanlış Cevap</h3></div>
+                    </div>
+                    <div class="mt-6 p-5 bg-red-50 rounded-2xl">
+                        <p class="arabic text-xl text-red-800 mb-3">${q.ayet}</p>
+                    </div>`;
+            }
+            document.getElementById('nav-buttons').classList.remove('hidden');
+            updateProgress();
+        }
+
+        function confettiExplosion() {
+            confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+        }
+
+        function updateProgress() {
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('current-q').textContent = currentQuestionIndex + 1;
+            document.getElementById('correct-count').textContent = score.correct;
+            document.getElementById('wrong-count').textContent = score.wrong;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex >= questions.length) showResults();
+            else {
+                document.getElementById('nav-buttons').classList.add('hidden');
+                renderQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                document.getElementById('nav-buttons').classList.add('hidden');
+                renderQuestion();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('nav-buttons').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            
+            document.getElementById('final-correct').textContent = score.correct;
+            document.getElementById('final-wrong').textContent = score.wrong;
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = { correct: 0, wrong: 0 };
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            renderQuestion();
+        }
+
+        window.onload = renderQuestion;
+    </script>
+</body>
+</html>
